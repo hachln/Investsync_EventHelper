@@ -32,28 +32,31 @@ export default function Account() {
 
   const fetchRegisteredEvents = async (userId: string) => {
     try {
-      const q = query(
-        collection(db, "events"), 
-        where("attendees", "array-contains", userId)
-      );
-      
+      const q = query(collection(db, "events"));
       const querySnapshot = await getDocs(q);
-      let eventsList = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
 
-      // CLIENT-SIDE SORTING: Sort by sortableDate (Seconds)
+      let eventsList = querySnapshot.docs
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }))
+        // ✅ FILTER BY NEW STRUCTURE
+        .filter((event: any) => {
+          return event.attendees?.[userId]?.registered === true;
+        });
+
+      // ✅ SORT (UNCHANGED)
       eventsList.sort((a: any, b: any) => {
-        const dateA = a.sortableDate ? a.sortableDate.seconds : 0;
-        const dateB = b.sortableDate ? b.sortableDate.seconds : 0;
-        return dateA - dateB; // Ascending (Oldest -> Newest)
+        const dateA = a.sortableDate?.seconds ?? 0;
+        const dateB = b.sortableDate?.seconds ?? 0;
+        return dateA - dateB;
       });
-      
+
       setRegisteredEvents(eventsList);
     } catch (error) {
       console.error("Error fetching events:", error);
     }
+
     setLoading(false);
   };
 

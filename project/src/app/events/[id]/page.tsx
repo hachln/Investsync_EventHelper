@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation'; // Added useRouter
 import { db, auth } from '../../firebase'; 
-import { doc, getDoc, updateDoc, deleteDoc, arrayUnion } from 'firebase/firestore'; // Added deleteDoc
+import { doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { ArrowLeftIcon, MapPinIcon, ClockIcon, CalendarIcon, CheckCircleIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/solid';
 
@@ -17,6 +17,9 @@ export default function EventDetail() {
   const [user, setUser] = useState<User | null>(null);
   const [isRegistered, setIsRegistered] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false); // Admin State
+
+  const attendeeData = user ? event?.attendees?.[user.uid] : null;
+  const isAttended = !!attendeeData?.attended;
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -46,7 +49,11 @@ export default function EventDetail() {
       if (docSnap.exists()) {
         const eventData = docSnap.data();
         setEvent(eventData);
-        if (currentUser && eventData.attendees && eventData.attendees.includes(currentUser.uid)) {
+        if (
+          currentUser &&
+          eventData.attendees &&
+          eventData.attendees[currentUser.uid]?.registered
+        ) {
           setIsRegistered(true);
         }
       }
@@ -64,7 +71,12 @@ export default function EventDetail() {
     setRegistering(true);
     try {
       const docRef = doc(db, "events", params.id as string);
-      await updateDoc(docRef, { attendees: arrayUnion(user.uid) });
+      await updateDoc(docRef, {
+        [`attendees.${user.uid}`]: {
+          registered: true,
+          attended: false,
+        },
+      });
       setIsRegistered(true);
       alert("Success! You are registered.");
     } catch (error) {
@@ -108,6 +120,13 @@ export default function EventDetail() {
                     <button onClick={handleDelete} className="p-2 bg-red-600 rounded-full text-white shadow-lg hover:bg-red-500">
                         <TrashIcon className="h-5 w-5" />
                     </button>
+                    {/*Attendance QR code*/}
+                    <Link
+                      href={`/events/${params.id}/attendance`}
+                      className="p-2 bg-green-600 rounded-full text-white shadow-lg hover:bg-green-500"
+                    >
+                      <CheckCircleIcon className="h-5 w-5" />
+                    </Link>
                 </div>
             )}
         </div>
@@ -155,22 +174,40 @@ export default function EventDetail() {
 
         {/* Register Button (Hidden for Admins so they don't accidentally register) */}
         {!isAdmin && (
-            <div className="fixed bottom-0 left-0 w-full p-6 bg-gradient-to-t from-gray-950 to-transparent">
-            {isRegistered ? (
-                <button disabled className="w-full py-4 bg-green-600 text-white font-bold text-xl rounded-full shadow-lg flex items-center justify-center gap-2 opacity-90 cursor-default">
+          <div className="fixed bottom-0 left-0 w-full p-6 bg-gradient-to-t from-gray-950 to-transparent">
+            {isAttended ? (
+              /* ATTENDED STATE */
+              <button
+                disabled
+                className="w-full py-4 bg-blue-600 text-white font-bold text-xl rounded-full shadow-lg flex items-center justify-center gap-2 opacity-90 cursor-default"
+              >
+                <CheckCircleIcon className="h-6 w-6" />
+                Attended
+              </button>
+
+            ) : isRegistered ? (
+              /* REGISTERED BUT NOT ATTENDED */
+              <button
+                disabled
+                className="w-full py-4 bg-green-600 text-white font-bold text-xl rounded-full shadow-lg flex items-center justify-center gap-2 opacity-90 cursor-default"
+              >
                 <CheckCircleIcon className="h-6 w-6" />
                 Registered
-                </button>
+              </button>
+
             ) : (
-                <button 
+              /* NOT REGISTERED */
+              <button
                 onClick={handleRegister}
                 disabled={registering}
-                className={`w-full py-4 ${registering ? 'bg-gray-500' : 'bg-white'} text-black font-bold text-xl rounded-full shadow-lg hover:scale-[1.02] transition-transform`}
-                >
+                className={`w-full py-4 ${
+                  registering ? 'bg-gray-500' : 'bg-white'
+                } text-black font-bold text-xl rounded-full shadow-lg hover:scale-[1.02] transition-transform`}
+              >
                 {registering ? "Registering..." : "Register Now"}
-                </button>
+              </button>
             )}
-            </div>
+          </div>
         )}
       </div>
     </div>
