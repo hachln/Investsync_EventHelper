@@ -10,6 +10,7 @@ export default function ScannerPage() {
     const [result, setResult] = useState<string | null>(null)
     const [error, setError] = useState<string | null>(null)
     const html5QrRef = useRef<any>(null)
+    const mediaStreamRef = useRef<MediaStream | null>(null)
     const hasHandledScanRef = useRef(false)
 
     const regionId = "html5qr-reader"
@@ -68,17 +69,25 @@ export default function ScannerPage() {
 
         const handleVisibilityChange = () => {
             if (document.hidden) {
-                stopScanner()
+                stopScannerImmediate()
             }
         }
 
-        window.addEventListener("pagehide", stopScanner)
+        const handlePageHide = () => {
+            stopScannerImmediate()
+        }
+
+        window.addEventListener("pagehide", handlePageHide)
+        window.addEventListener("beforeunload", handlePageHide)
+        window.addEventListener("unload", handlePageHide)
         document.addEventListener("visibilitychange", handleVisibilityChange)
 
         return () => {
-            window.removeEventListener("pagehide", stopScanner)
+            window.removeEventListener("pagehide", handlePageHide)
+            window.removeEventListener("beforeunload", handlePageHide)
+            window.removeEventListener("unload", handlePageHide)
             document.removeEventListener("visibilitychange", handleVisibilityChange)
-            stopScanner()
+            stopScannerImmediate()
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
@@ -106,6 +115,12 @@ export default function ScannerPage() {
                 },
                 () => {}
             )
+
+            // Store the media stream reference
+            const video = document.querySelector(`#${regionId} video`) as HTMLVideoElement
+            if (video?.srcObject instanceof MediaStream) {
+                mediaStreamRef.current = video.srcObject
+            }
         } catch (e: any) {
             setError(e?.message || String(e))
         }
@@ -114,11 +129,34 @@ export default function ScannerPage() {
     const stopScanner = async () => {
         if (!html5QrRef.current) return
 
-        try {
-            await html5QrRef.current.stop()
-            await html5QrRef.current.clear()
-        } catch {}
+        const scanner = html5QrRef.current
         html5QrRef.current = null
+
+        try {
+            await scanner.stop()
+            await scanner.clear()
+        } catch {}
+    }
+
+    const stopScannerImmediate = () => {
+        if (!html5QrRef.current) return
+        
+        const scanner = html5QrRef.current
+        html5QrRef.current = null
+        
+        // Stop all media tracks directly
+        if (mediaStreamRef.current) {
+            mediaStreamRef.current.getTracks().forEach((track: MediaStreamTrack) => {
+                track.stop()
+            })
+            mediaStreamRef.current = null
+        }
+
+        // Then stop the scanner
+        try {
+            scanner.stop().catch(() => {})
+            scanner.clear().catch(() => {})
+        } catch {}
     }
 
     return (

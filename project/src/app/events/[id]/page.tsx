@@ -172,8 +172,7 @@ export default function EventDetail() {
            </p>
         </div>
 
-        {/* Register Button (Hidden for Admins so they don't accidentally register) */}
-        {!isAdmin && (
+        
           <div className="fixed bottom-0 left-0 w-full p-6 bg-gradient-to-t from-gray-950 to-transparent">
             {isAttended ? (
               /* ATTENDED STATE */
@@ -208,7 +207,7 @@ export default function EventDetail() {
               </button>
             )}
           </div>
-        )}
+        
       </div>
     </div>
   );
