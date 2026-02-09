@@ -22,6 +22,17 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 const auth = getAuth(app);
+
+// Set persistence to LOCAL to ensure auth state persists across page reloads
+import { setPersistence, browserLocalPersistence } from "firebase/auth";
+setPersistence(auth, browserLocalPersistence).catch((error) => {
+  console.error("Error setting persistence:", error);
+});
+
 const googleProvider = new GoogleAuthProvider();
+// Force the redirect to always return to /account page
+googleProvider.setCustomParameters({
+  prompt: 'select_account'
+});
 
 export { db, auth, googleProvider };
