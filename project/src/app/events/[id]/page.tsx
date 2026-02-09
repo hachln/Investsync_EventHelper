@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation'; // Added useRouter
 import { db, auth } from '../../firebase'; 
-import { doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, deleteDoc, collection, getDocs } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { ArrowLeftIcon, MapPinIcon, ClockIcon, CalendarIcon, CheckCircleIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/solid';
 
@@ -17,6 +17,7 @@ export default function EventDetail() {
   const [user, setUser] = useState<User | null>(null);
   const [isRegistered, setIsRegistered] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false); // Admin State
+  const [attendeeNames, setAttendeeNames] = useState<{ [key: string]: string }>({});
 
   const attendeeData = user ? event?.attendees?.[user.uid] : null;
   const isAttended = !!attendeeData?.attended;
@@ -49,6 +50,25 @@ export default function EventDetail() {
       if (docSnap.exists()) {
         const eventData = docSnap.data();
         setEvent(eventData);
+        
+        // Fetch real names for all attendees
+        if (eventData.attendees) {
+          const names: { [key: string]: string } = {};
+          for (const userId of Object.keys(eventData.attendees)) {
+            try {
+              const userDoc = await getDoc(doc(db, "users", userId));
+              if (userDoc.exists() && userDoc.data().realName) {
+                names[userId] = userDoc.data().realName;
+              } else {
+                names[userId] = userId; // Fallback to user ID if no real name
+              }
+            } catch {
+              names[userId] = userId; // Fallback to user ID on error
+            }
+          }
+          setAttendeeNames(names);
+        }
+
         if (
           currentUser &&
           eventData.attendees &&

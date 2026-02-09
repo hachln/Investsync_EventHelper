@@ -32,7 +32,7 @@ export default function Home() {
       
       {/* 1. Header / Logo */}
       <div className="mt-10 mb-8 flex flex-col items-center justify-center">
-        <div className="w-24 h-24  rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(37,99,235,0.5)] mb-4 overflow-hidden relative">
+        <div className="w-24 h-24  rounded-full flex items-center justify-center mb-4 overflow-hidden relative">
         <Image 
           src={logo}   
           alt="InvestSync Logo" 

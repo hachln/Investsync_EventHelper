@@ -4,23 +4,30 @@ import { useState, useEffect } from 'react';
 import BottomNav from '../BottomNav';
 import { auth, db, googleProvider } from '../firebase'; // Import db here
 import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
-import { collection, query, where, getDocs } from 'firebase/firestore'; // Import Firestore query tools
+import { collection, query, where, getDocs, doc, setDoc, getDoc } from 'firebase/firestore'; // Import Firestore query tools
 import Link from 'next/link'; // Import Link to make cards clickable
 
 export default function Account() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [registeredEvents, setRegisteredEvents] = useState<any[]>([]); // State for the list
+  const [realName, setRealName] = useState('');
+  const [realNameInput, setRealNameInput] = useState('');
+  const [savingRealName, setSavingRealName] = useState(false);
 
   // 1. Listen for Auth State Changes
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
+        // Fetch real name from database
+        fetchRealName(currentUser.uid);
         // If logged in, fetch their events immediately
         fetchRegisteredEvents(currentUser.uid);
       } else {
         setRegisteredEvents([]); // Clear events if logged out
+        setRealName('');
+        setRealNameInput('');
         setLoading(false);
       }
     });
@@ -29,6 +36,39 @@ export default function Account() {
 
   // 2. Fetch Events from Firestore
   // ... inside app/account/page.tsx
+
+  const fetchRealName = async (userId: string) => {
+    try {
+      const userDoc = await getDoc(doc(db, "users", userId));
+      if (userDoc.exists() && userDoc.data().realName) {
+        setRealName(userDoc.data().realName);
+        setRealNameInput(userDoc.data().realName);
+      }
+    } catch (error) {
+      console.error("Error fetching real name:", error);
+    }
+  };
+
+  const handleSaveRealName = async () => {
+    if (!user || !realNameInput.trim()) {
+      alert("Please enter a valid name");
+      return;
+    }
+
+    setSavingRealName(true);
+    try {
+      await setDoc(
+        doc(db, "users", user.uid),
+        { realName: realNameInput.trim() },
+        { merge: true }
+      );
+      setRealName(realNameInput.trim());
+      alert("Real name saved successfully!");
+    } catch (error) {
+      alert("Error saving real name: " + error);
+    }
+    setSavingRealName(false);
+  };
 
   const fetchRegisteredEvents = async (userId: string) => {
     try {
@@ -110,6 +150,35 @@ export default function Account() {
           </button>
         )}
       </div>
+
+      {/* Real Name Section - Only visible when logged in */}
+      {user && (
+        <div className="p-6 border-b border-gray-800">
+          <h3 className="text-lg font-bold mb-4 flex items-center">
+            <span className="w-2 h-8 bg-purple-500 mr-3 rounded-full"></span>
+            Your Real Name
+          </h3>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={realNameInput}
+              onChange={(e) => setRealNameInput(e.target.value)}
+              placeholder="Enter your real name"
+              className="flex-1 px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
+            />
+            <button
+              onClick={handleSaveRealName}
+              disabled={savingRealName}
+              className="px-6 py-2 bg-purple-600 text-white rounded-lg font-bold hover:bg-purple-500 transition disabled:bg-gray-600"
+            >
+              {savingRealName ? "Saving..." : "Save"}
+            </button>
+          </div>
+          {realName && (
+            <p className="mt-2 text-sm text-gray-400">Currently saved: <span className="text-white font-semibold">{realName}</span></p>
+          )}
+        </div>
+      )}
 
       {/* Registered Events Section */}
       <div className="p-6">

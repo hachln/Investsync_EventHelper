@@ -21,7 +21,7 @@ export default function AddEvent() {
     timeInput: '', // HH:MM (from time picker)
     location: '',
     description: '',
-    category: 'tech'
+    category: 'grad1'
   });
 
   // 1. Verify Admin Status
@@ -75,8 +75,8 @@ export default function AddEvent() {
 
       // 3. Determine Color
       let colorGradient = "from-pink-500 via-purple-600 to-indigo-800";
-      if (formData.category === 'sport') colorGradient = "from-blue-500 via-indigo-600 to-purple-800";
-      if (formData.category === 'music') colorGradient = "from-yellow-400 to-orange-500";
+      if (formData.category === 'grad2') colorGradient = "from-blue-500 via-indigo-600 to-purple-800";
+      if (formData.category === 'grad3') colorGradient = "from-yellow-400 to-orange-500";
 
       // 4. Save to Firebase
       await addDoc(collection(db, "events"), {
@@ -119,12 +119,12 @@ export default function AddEvent() {
         
         <div>
           <label className="text-xs text-gray-400 uppercase font-bold ml-1">Event Title</label>
-          <input name="title" required onChange={handleChange} className="w-full bg-gray-900 border border-gray-800 p-3 rounded-lg focus:border-cyan-500 outline-none transition-colors" placeholder="e.g. TECH EVENT" />
+          <input name="title" required onChange={handleChange} className="w-full bg-gray-900 border border-gray-800 p-3 rounded-lg focus:border-cyan-500 outline-none transition-colors" placeholder="e.g. Lecture" />
         </div>
 
         <div>
            <label className="text-xs text-gray-400 uppercase font-bold ml-1">Subtitle</label>
-           <input name="subtitle" required onChange={handleChange} className="w-full bg-gray-900 border border-gray-800 p-3 rounded-lg focus:border-cyan-500 outline-none transition-colors" placeholder="e.g. Alumni Sharing" />
+           <input name="subtitle" required onChange={handleChange} className="w-full bg-gray-900 border border-gray-800 p-3 rounded-lg focus:border-cyan-500 outline-none transition-colors" placeholder="e.g. Company Visit" />
         </div>
 
         {/* NEW: Date and Time Pickers */}
@@ -162,9 +162,9 @@ export default function AddEvent() {
            <label className="text-xs text-gray-400 uppercase font-bold ml-1">Category</label>
            <div className="relative">
              <select name="category" onChange={handleChange} className="w-full bg-gray-900 border border-gray-800 p-3 rounded-lg focus:border-cyan-500 outline-none appearance-none transition-colors">
-               <option value="tech">Tech (Pink/Purple)</option>
-               <option value="sport">Sport (Blue/Indigo)</option>
-               <option value="music">Music (Yellow/Orange)</option>
+               <option value="grad1">Gradient 1 (Pink/Purple)</option>
+               <option value="grad2"> Gradient 2 (Blue/Indigo)</option>
+               <option value="grad3"> Gradient 3 (Yellow/Orange)</option>
              </select>
            </div>
         </div>

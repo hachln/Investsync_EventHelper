@@ -139,18 +139,18 @@ export default function ScannerPage() {
     }
 
     const stopScannerImmediate = () => {
-        if (!html5QrRef.current) return
-        
-        const scanner = html5QrRef.current
-        html5QrRef.current = null
-        
-        // Stop all media tracks directly
+        // Stop all media tracks directly first, regardless of scanner state
         if (mediaStreamRef.current) {
             mediaStreamRef.current.getTracks().forEach((track: MediaStreamTrack) => {
                 track.stop()
             })
             mediaStreamRef.current = null
         }
+
+        if (!html5QrRef.current) return
+        
+        const scanner = html5QrRef.current
+        html5QrRef.current = null
 
         // Then stop the scanner
         try {
