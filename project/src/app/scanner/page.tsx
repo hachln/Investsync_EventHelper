@@ -98,11 +98,6 @@ export default function ScannerPage() {
         hasHandledScanRef.current = false
 
         try {
-            // Check if mediaDevices is supported
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                throw new Error("Camera not supported on this browser")
-            }
-
             const { Html5Qrcode } = await import("html5-qrcode")
 
             if (html5QrRef.current) {
@@ -112,91 +107,14 @@ export default function ScannerPage() {
             const scanner = new Html5Qrcode(regionId)
             html5QrRef.current = scanner
 
-            // Try to get available cameras
-            let cameras: any[] = []
-            try {
-                cameras = await Html5Qrcode.getCameras()
-            } catch (err) {
-                console.warn("Could not enumerate cameras:", err)
-            }
-
-            let cameraStarted = false
-            let lastError: any = null
-
-            // If we have camera devices, try to use them by ID
-            if (cameras && cameras.length > 0) {
-                // Try rear camera first (usually the last camera on mobile)
-                const rearCamera = cameras.find((cam: any) => 
-                    cam.label?.toLowerCase().includes('back') || 
-                    cam.label?.toLowerCase().includes('rear') ||
-                    cam.label?.toLowerCase().includes('environment')
-                ) || cameras[cameras.length - 1]
-
-                try {
-                    await scanner.start(
-                        rearCamera.id,
-                        { fps: 10, qrbox: { width: 240, height: 240 } },
-                        async (decodedText: string) => {
-                            await handleAttendanceScan(decodedText)
-                        },
-                        () => {}
-                    )
-                    cameraStarted = true
-                } catch (err) {
-                    lastError = err
-                    // Try other cameras
-                    for (const camera of cameras) {
-                        if (camera.id === rearCamera.id) continue
-                        try {
-                            await scanner.start(
-                                camera.id,
-                                { fps: 10, qrbox: { width: 240, height: 240 } },
-                                async (decodedText: string) => {
-                                    await handleAttendanceScan(decodedText)
-                                },
-                                () => {}
-                            )
-                            cameraStarted = true
-                            break
-                        } catch (e) {
-                            lastError = e
-                            continue
-                        }
-                    }
-                }
-            }
-
-            // If camera ID approach didn't work, try constraint-based approach
-            if (!cameraStarted) {
-                const cameraConfigs = [
-                    { facingMode: "environment" },
-                    { facingMode: "user" },
-                    "environment",
-                    "user"
-                ]
-
-                for (const config of cameraConfigs) {
-                    try {
-                        await scanner.start(
-                            config,
-                            { fps: 10, qrbox: { width: 240, height: 240 } },
-                            async (decodedText: string) => {
-                                await handleAttendanceScan(decodedText)
-                            },
-                            () => {}
-                        )
-                        cameraStarted = true
-                        break
-                    } catch (err) {
-                        lastError = err
-                        continue
-                    }
-                }
-            }
-
-            if (!cameraStarted) {
-                throw lastError || new Error("Could not start camera. Please ensure camera permissions are granted.")
-            }
+            await scanner.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 240, height: 240 } },
+                async (decodedText: string) => {
+                    await handleAttendanceScan(decodedText)
+                },
+                () => {}
+            )
 
             // Store the media stream reference
             const video = document.querySelector(`#${regionId} video`) as HTMLVideoElement
@@ -204,7 +122,6 @@ export default function ScannerPage() {
                 mediaStreamRef.current = video.srcObject
             }
         } catch (e: any) {
-            console.error("Scanner error:", e)
             setError(e?.message || String(e))
         }
     }
@@ -285,4 +202,3 @@ export default function ScannerPage() {
         </div>
     )
 }
-
