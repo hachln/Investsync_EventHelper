@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import BottomNav from '../BottomNav';
 import { auth, db, googleProvider } from '../firebase'; // Import db here
-import { signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, User } from 'firebase/auth';
+import { signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, User, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { collection, query, where, getDocs, doc, setDoc, getDoc } from 'firebase/firestore'; // Import Firestore query tools
 import Link from 'next/link'; // Import Link to make cards clickable
 
@@ -14,24 +14,19 @@ export default function Account() {
   const [realName, setRealName] = useState('');
   const [realNameInput, setRealNameInput] = useState('');
   const [savingRealName, setSavingRealName] = useState(false);
-  const [debugMsg, setDebugMsg] = useState<string[]>([]); // Debug messages visible on screen
 
   // 1. Listen for Auth State Changes
   useEffect(() => {
     // Check for redirect result first (for mobile login)
     const handleRedirect = async () => {
       try {
-        setDebugMsg(prev => [...prev, "Checking for redirect result..."]);
         const result = await getRedirectResult(auth);
-        setDebugMsg(prev => [...prev, `Redirect result: ${result ? 'Found user' : 'No user'}`]);
         if (result?.user) {
-          // User successfully signed in via redirect
-          setDebugMsg(prev => [...prev, `Signed in: ${result.user.email}`]);
-        } else {
-          setDebugMsg(prev => [...prev, "No redirect result found"]);
+          sessionStorage.removeItem('pendingAuth');
+          sessionStorage.removeItem('loginOrigin');
         }
       } catch (error: any) {
-        setDebugMsg(prev => [...prev, `Error: ${error.code} - ${error.message}`]);
+        sessionStorage.removeItem('pendingAuth');
         if (error.code !== 'auth/popup-closed-by-user') {
           alert("Sign-in error: " + error.message);
         }
@@ -41,7 +36,6 @@ export default function Account() {
     handleRedirect();
 
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setDebugMsg(prev => [...prev, `Auth state: ${currentUser?.email || 'Not logged in'}`]);
       setUser(currentUser);
       if (currentUser) {
         // Fetch real name from database
@@ -126,27 +120,27 @@ export default function Account() {
 
   const handleLogin = async () => {
     try {
-      setDebugMsg(prev => [...prev, "Starting login..."]);
-      // Detect if mobile device
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      
-      setDebugMsg(prev => [...prev, `Device: ${isMobile ? 'Mobile' : 'Desktop'}`]);
-      
-      if (isMobile) {
-        setDebugMsg(prev => [...prev, "Using redirect method..."]);
-        // Use redirect for mobile (doesn't throw errors, just redirects)
-        await signInWithRedirect(auth, googleProvider);
-        // Note: execution won't continue here because page redirects
-      } else {
-        setDebugMsg(prev => [...prev, "Using popup method..."]);
-        // Use popup for desktop
+      // Try popup first (works on both desktop and mobile)
+      try {
         await signInWithPopup(auth, googleProvider);
-        setDebugMsg(prev => [...prev, "Popup login successful"]);
+      } catch (popupError: any) {
+        // If popup was blocked or failed, try redirect as fallback
+        if (popupError.code === 'auth/popup-blocked' || 
+            popupError.code === 'auth/popup-closed-by-user' ||
+            popupError.code === 'auth/cancelled-popup-request') {
+          // Ensure persistence is set before redirect
+          await setPersistence(auth, browserLocalPersistence);
+          sessionStorage.setItem('loginOrigin', window.location.origin);
+          sessionStorage.setItem('pendingAuth', 'true');
+          
+          await signInWithRedirect(auth, googleProvider);
+        } else {
+          throw popupError; // Re-throw other errors
+        }
       }
     } catch (error: any) {
-      const errorMsg = `Login error: ${error.code} - ${error.message}`;
-      setDebugMsg(prev => [...prev, errorMsg]);
-      // Only show error alert if it's not a user-cancelled action
+      sessionStorage.removeItem('pendingAuth');
+      
       if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
         alert("Login failed: " + (error.message || "Please try again."));
       }
@@ -166,19 +160,6 @@ export default function Account() {
   return (
     <div className="min-h-screen bg-gray-950 text-white pb-24">
       
-      {/* Debug Panel - Remove after testing */}
-      {debugMsg.length > 0 && (
-        <div className="bg-yellow-900 text-yellow-200 p-4 text-xs overflow-auto max-h-40">
-          <strong>Debug Log:</strong>
-          {debugMsg.map((msg, i) => (
-            <div key={i}>{i + 1}. {msg}</div>
-          ))}
-          <button onClick={() => setDebugMsg([])} className="mt-2 px-2 py-1 bg-yellow-700 rounded text-xs">
-            Clear Log
-          </button>
-        </div>
-      )}
-
       {/* Profile Header */}
       <div className="bg-gray-900 p-8 rounded-b-3xl shadow-2xl flex flex-col items-center">
         <div className="w-28 h-28 bg-gray-800 rounded-full mb-4 border-4 border-gray-700 overflow-hidden flex items-center justify-center">
