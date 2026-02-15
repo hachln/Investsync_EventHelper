@@ -109,7 +109,7 @@ export default function ScannerPage() {
 
             await scanner.start(
                 { facingMode: "environment" },
-                { fps: 10, qrbox: { width: 240, height: 240 } },
+                { fps: 10, qrbox: { width: 300, height: 300 }, aspectRatio: 1.0 },
                 async (decodedText: string) => {
                     await handleAttendanceScan(decodedText)
                 },
@@ -172,18 +172,22 @@ export default function ScannerPage() {
 
                 {/* Scanner Box */}
                 <div
-                    id={regionId}
-                    className="
-                        w-full
-                        max-w-sm
-                        sm:max-w-md
-                        bg-black
-                        rounded-lg
-                        overflow-hidden
-                        aspect-square
-                        sm:aspect-video
-                    "
+                id={regionId}
+                className="
+                    w-[350px]
+                    h-[350px]
+                    bg-black
+                    rounded-lg
+                    overflow-hidden
+                    [&>div]:w-full
+                    [&>div]:h-full
+                    [&>div>video]:w-full
+                    [&>div>video]:h-full
+                    [&>div>video]:object-cover
+                "
                 />
+
+
 
                 {result && (
                     <div className="mt-4 text-center max-w-sm break-words">
