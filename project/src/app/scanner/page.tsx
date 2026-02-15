@@ -109,7 +109,7 @@ export default function ScannerPage() {
 
             await scanner.start(
                 { facingMode: "environment" },
-                { fps: 10, qrbox: { width: 300, height: 300 }, aspectRatio: 1.0 },
+                { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
                 async (decodedText: string) => {
                     await handleAttendanceScan(decodedText)
                 },
@@ -174,8 +174,8 @@ export default function ScannerPage() {
                 <div
                 id={regionId}
                 className="
-                    w-[350px]
-                    h-[350px]
+                    w-[300px]
+                    h-[300px]
                     bg-black
                     rounded-lg
                     overflow-hidden

@@ -25,18 +25,4 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-#html5qr-reader {
-  position: relative !important;
-  overflow: hidden !important;
-}
 
-#html5qr-reader video {
-  position: absolute !important;
-  top: 50% !important;
-  left: 50% !important;
-  transform: translate(-50%, -50%) !important;
-  min-width: 100% !important;
-  min-height: 100% !important;
-  width: auto !important;
-  height: auto !important;
-}
